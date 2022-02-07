@@ -1,5 +1,7 @@
 #include "postgres.h"
 
+#include <float.h>
+
 #include "access/relscan.h"
 #include "ivfflat.h"
 #include "miscadmin.h"
@@ -45,6 +47,7 @@ GetScanLists(IndexScanDesc scan, Datum value)
 	int			listCount = 0;
 	IvfflatScanOpaque so = (IvfflatScanOpaque) scan->opaque;
 	double		distance;
+	double		minDistance = DBL_MAX;
 
 	/* Search all list pages */
 	while (BlockNumberIsValid(nextblkno))
@@ -62,9 +65,18 @@ GetScanLists(IndexScanDesc scan, Datum value)
 			/* Use procinfo from the index instead of scan key for performance */
 			distance = DatumGetFloat8(FunctionCall2Coll(so->procinfo, so->collation, PointerGetDatum(&list->center), value));
 
-			so->lists[listCount].startPage = list->startPage;
-			so->lists[listCount].distance = distance;
-			listCount++;
+			if (so->probes > 1)
+			{
+				so->lists[listCount].startPage = list->startPage;
+				so->lists[listCount].distance = distance;
+				listCount++;
+			}
+			else if (distance < minDistance)
+			{
+				so->lists[0].startPage = list->startPage;
+				so->lists[0].distance = distance;
+				minDistance = distance;
+			}
 		}
 
 		nextblkno = IvfflatPageGetOpaque(cpage)->nextblkno;
@@ -72,11 +84,14 @@ GetScanLists(IndexScanDesc scan, Datum value)
 		UnlockReleaseBuffer(cbuf);
 	}
 
-	/* Sort by distance */
-	qsort(so->lists, listCount, sizeof(IvfflatScanList), CompareLists);
+	if (so->probes > 1)
+	{
+		/* Sort by distance */
+		qsort(so->lists, listCount, sizeof(IvfflatScanList), CompareLists);
 
-	if (so->probes > listCount)
-		so->probes = listCount;
+		if (so->probes > listCount)
+			so->probes = listCount;
+	}
 }
 
 /*
@@ -168,13 +183,16 @@ ivfflatbeginscan(Relation index, int nkeys, int norderbys)
 	Oid			sortOperators[] = {Float8LessOperator};
 	Oid			sortCollations[] = {InvalidOid};
 	bool		nullsFirstFlags[] = {false};
+	int			probes;
 
 	scan = RelationGetIndexScan(index, nkeys, norderbys);
 	lists = IvfflatGetLists(scan->indexRelation);
+	probes = ivfflat_probes;
 
-	so = (IvfflatScanOpaque) palloc(offsetof(IvfflatScanOpaqueData, lists) + lists * sizeof(IvfflatScanList));
+	so = (IvfflatScanOpaque) palloc(offsetof(IvfflatScanOpaqueData, lists) + (probes == 1 ? 1 : lists) * sizeof(IvfflatScanList));
 	so->buf = InvalidBuffer;
 	so->first = true;
+	so->probes = probes;
 
 	/* Set support functions */
 	so->procinfo = index_getprocinfo(index, 1, IVFFLAT_DISTANCE_PROC);
@@ -224,7 +242,6 @@ ivfflatrescan(IndexScanDesc scan, ScanKey keys, int nkeys, ScanKey orderbys, int
 #endif
 
 	so->first = true;
-	so->probes = ivfflat_probes;
 
 	if (keys && scan->numberOfKeys > 0)
 		memmove(scan->keyData, keys, scan->numberOfKeys * sizeof(ScanKeyData));
