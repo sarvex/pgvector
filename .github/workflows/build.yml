@@ -6,33 +6,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        postgres: [14, 13, 12, 11, 10, 9.6]
-        include:
-        - os: macos-latest
-          postgres: 14
+        os: [windows-latest]
+        postgres: [14]
     steps:
     - uses: actions/checkout@v2
-    - uses: ankane/setup-postgres@v1
-      with:
-        postgres-version: ${{ matrix.postgres }}
-    - if: ${{ startsWith(matrix.os, 'ubuntu') }}
-      run: sudo apt-get update && sudo apt-get install postgresql-server-dev-${{ matrix.postgres }} libipc-run-perl
-    - run: make
-    - if: ${{ startsWith(matrix.os, 'ubuntu') }}
-      run: |
-        export PG_CONFIG=`which pg_config`
-        sudo --preserve-env=PG_CONFIG make install
-    - if: ${{ startsWith(matrix.os, 'macos') }}
-      run: make install
+
+    # install postgres
+    - run: C:\msys64\usr\bin\pacman --noconfirm -S mingw-w64-x86_64-postgresql gettext-devel
+    - run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+    - run: pg_config
+    - run: initdb -D data -U postgres
+
+    # install pgvector
+    - run: make PG_CFLAGS="-IC:/msys64/usr/include"
+    - run: make install
+
+    # run tests
+    - run: pg_ctl -D data start
+    - run: mkdir /tmp
     - run: make installcheck
     - if: ${{ failure() }}
       run: cat regression.diffs
-    - if: ${{ startsWith(matrix.os, 'ubuntu') }}
-      run: make prove_installcheck
-    - if: ${{ startsWith(matrix.os, 'macos') }}
-      run: |
-        brew install cpanm && cpanm IPC::Run
-        wget -q https://github.com/postgres/postgres/archive/refs/tags/REL_14_4.tar.gz
-        tar xf REL_14_4.tar.gz
-        make prove_installcheck PROVE=prove PERL5LIB="postgres-REL_14_4/src/test/perl:/Users/runner/perl5/lib/perl5"
