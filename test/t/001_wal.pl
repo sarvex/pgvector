@@ -3,8 +3,8 @@
 # Test generic xlog record work for ivfflat index replication.
 use strict;
 use warnings;
-use PostgresNode;
-use TestLib;
+use PostgreSQL::Test::Cluster;
+use PostgreSQL::Test::Utils;
 use Test::More tests => 31;
 
 my $dim = 32;
