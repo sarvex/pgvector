@@ -40,7 +40,7 @@ PG_CONFIG ?= pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 
-# PROVE_FLAGS += -I ./test/perl
+PROVE_FLAGS += -I ./test/perl
 
 prove_installcheck:
 	rm -rf $(CURDIR)/tmp_check
