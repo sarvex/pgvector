@@ -1,3 +1,3 @@
-PostgreSQL::Test::Utils;
+use PostgreSQL::Test::Utils;
 
 1;
