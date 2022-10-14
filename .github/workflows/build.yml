@@ -7,7 +7,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        postgres: [15, 14, 13]
+        postgres: [13]
         # include:
         # - os: macos-latest
         #   postgres: 14
@@ -28,6 +28,7 @@ jobs:
     - run: make installcheck
     - if: ${{ failure() }}
       run: cat regression.diffs
+    - run: find /usr/lib/postgresql/13/lib/pgxs
     - if: ${{ startsWith(matrix.os, 'ubuntu') }}
       run: make prove_installcheck
     - if: ${{ startsWith(matrix.os, 'macos') }}
@@ -38,5 +39,4 @@ jobs:
         make prove_installcheck PROVE=prove PERL5LIB="postgres-REL_14_4/src/test/perl:/Users/runner/perl5/lib/perl5"
     - if: ${{ failure() }}
       run: |
-        find tmp_check
-        cat tmp_check/log/*
+        find .
