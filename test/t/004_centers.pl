@@ -5,7 +5,7 @@ use PostgreSQL::Test::Utils;
 use Test::More tests => 3;
 
 # Initialize node
-my $node = get_new_node('node');
+my $node = PostgreSQL::Test::Cluster->new('node');
 $node->init;
 $node->start;
 
