@@ -1,29 +1,29 @@
 name: build
 on: [push, pull_request]
 jobs:
-  ubuntu:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        postgres: [15, 14, 13, 12, 11, 10]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ankane/setup-postgres@v1
-        with:
-          postgres-version: ${{ matrix.postgres }}
-          dev-files: true
-      - run: make
-      - run: |
-          export PG_CONFIG=`which pg_config`
-          sudo --preserve-env=PG_CONFIG make install
-      - run: make installcheck
-      - if: ${{ failure() }}
-        run: cat regression.diffs
-      - run: |
-          sudo apt-get update
-          sudo apt-get install libipc-run-perl
-          make prove_installcheck
+  # ubuntu:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       postgres: [15, 14, 13, 12, 11, 10]
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: ankane/setup-postgres@v1
+  #       with:
+  #         postgres-version: ${{ matrix.postgres }}
+  #         dev-files: true
+  #     - run: make
+  #     - run: |
+  #         export PG_CONFIG=`which pg_config`
+  #         sudo --preserve-env=PG_CONFIG make install
+  #     - run: make installcheck
+  #     - if: ${{ failure() }}
+  #       run: cat regression.diffs
+  #     - run: |
+  #         sudo apt-get update
+  #         sudo apt-get install libipc-run-perl
+  #         make prove_installcheck
   mac:
     runs-on: macos-latest
     steps:
@@ -37,21 +37,20 @@ jobs:
       - if: ${{ failure() }}
         run: cat regression.diffs
       - run: |
-          brew install cpanm
-          cpanm IPC::Run
+          cpan -T IPC::Run
           wget -q https://github.com/postgres/postgres/archive/refs/tags/REL_14_5.tar.gz
           tar xf REL_14_5.tar.gz
           make prove_installcheck PROVE=prove PROVE_FLAGS="-I ./postgres-REL_14_5/src/test/perl" PERL5LIB="/Users/runner/perl5/lib/perl5"
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ankane/setup-postgres@v1
-        with:
-          postgres-version: 14
-      - run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          nmake /NOLOGO /F Makefile.win
-          nmake /NOLOGO /F Makefile.win install
-          nmake /NOLOGO /F Makefile.win installcheck
-        shell: cmd
+  # windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: ankane/setup-postgres@v1
+  #       with:
+  #         postgres-version: 14
+  #     - run: |
+  #         call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+  #         nmake /NOLOGO /F Makefile.win
+  #         nmake /NOLOGO /F Makefile.win install
+  #         nmake /NOLOGO /F Makefile.win installcheck
+  #       shell: cmd
