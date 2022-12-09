@@ -37,7 +37,8 @@ jobs:
       - if: ${{ failure() }}
         run: cat regression.diffs
       - run: |
-          cpan -T IPC::Run
+          cpan App::cpanminus
+          cpanm --notest IPC::Run
           wget -q https://github.com/postgres/postgres/archive/refs/tags/REL_14_5.tar.gz
           tar xf REL_14_5.tar.gz
           make prove_installcheck PROVE=prove PROVE_FLAGS="-I ./postgres-REL_14_5/src/test/perl" PERL5LIB="/Users/runner/perl5/lib/perl5"
