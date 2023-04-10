@@ -688,6 +688,32 @@ vector_sub(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Multiply vectors
+ */
+PGDLLEXPORT PG_FUNCTION_INFO_V1(vector_mul);
+Datum
+vector_mul(PG_FUNCTION_ARGS)
+{
+	Vector	   *a = PG_GETARG_VECTOR_P(0);
+	Vector	   *b = PG_GETARG_VECTOR_P(1);
+	float	   *ax = a->x;
+	float	   *bx = b->x;
+	Vector	   *result;
+	float	   *rx;
+
+	CheckDims(a, b);
+
+	result = InitVector(a->dim);
+	rx = result->x;
+
+	/* Auto-vectorized */
+	for (int i = 0, imax = a->dim; i < imax; i++)
+		rx[i] = ax[i] * bx[i];
+
+	PG_RETURN_POINTER(result);
+}
+
+/*
  * Internal helper to compare vectors
  */
 int
